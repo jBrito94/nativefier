@@ -9,7 +9,14 @@ import {
   MenuItemConstructorOptions,
 } from 'electron';
 
-import { cleanupPlainText, isOSX, openExternal } from '../helpers/helpers';
+import {
+  cleanupPlainText,
+  isOSX,
+  openExternal,
+  nativeTabsSupported,
+} from '../helpers/helpers';
+import { createNewWindow } from '../helpers/windowHelpers';
+import { setupNativefierWindow } from '../helpers/windowEvents';
 import * as log from '../helpers/loggingHelper';
 import {
   clearAppData,
@@ -21,7 +28,10 @@ import {
   zoomOut,
   zoomReset,
 } from '../helpers/windowHelpers';
-import { OutputOptions } from '../../../shared/src/options/model';
+import {
+  OutputOptions,
+  outputOptionsToWindowOptions,
+} from '../../../shared/src/options/model';
 
 type BookmarksLink = {
   type: 'link';
@@ -41,6 +51,8 @@ type BookmarksMenuConfig = {
   bookmarks: BookmarkConfig[];
 };
 
+type CustomMenuConfig = BookmarksMenuConfig[];
+
 export function createMenu(
   options: OutputOptions,
   mainWindow: BrowserWindow,
@@ -55,11 +67,7 @@ export function createMenu(
 }
 
 export function generateMenu(
-  options: {
-    disableDevTools: boolean;
-    nativefierVersion: string;
-    zoom?: number;
-  },
+  options: OutputOptions,
   mainWindow: BrowserWindow,
 ): MenuItemConstructorOptions[] {
   const { nativefierVersion, zoom, disableDevTools } = options;
@@ -71,6 +79,19 @@ export function generateMenu(
   const editMenu: MenuItemConstructorOptions = {
     label: '&Edit',
     submenu: [
+      {
+        label: 'New Window',
+        accelerator: 'CmdOrCtrl+Shift+N',
+        click: () =>
+          createNewWindow(
+            outputOptionsToWindowOptions(options, nativeTabsSupported()),
+            setupNativefierWindow,
+            getCurrentURL(),
+          ),
+      },
+      {
+        type: 'separator',
+      },
       {
         label: 'Undo',
         accelerator: 'CmdOrCtrl+Z',
@@ -375,49 +396,58 @@ function injectBookmarks(menuTemplate: MenuItemConstructorOptions[]): void {
   }
 
   try {
-    const bookmarksMenuConfig = JSON.parse(
+    const customMenuConfig = JSON.parse(
       fs.readFileSync(bookmarkConfigPath, 'utf-8'),
-    ) as BookmarksMenuConfig;
-    const submenu: MenuItemConstructorOptions[] =
-      bookmarksMenuConfig.bookmarks.map((bookmark) => {
-        switch (bookmark.type) {
-          case 'link':
-            if (!('title' in bookmark && 'url' in bookmark)) {
-              throw new Error(
-                'All links in the bookmarks menu must have a title and url.',
-              );
-            }
-            try {
-              new URL(bookmark.url);
-            } catch {
-              throw new Error('Bookmark URL "' + bookmark.url + '"is invalid.');
-            }
-            return {
-              label: bookmark.title,
-              click: (): void => {
-                goToURL(bookmark.url)?.catch((err: unknown): void =>
-                  log.error(`${bookmark.title}.click ERROR`, err),
+    ) as CustomMenuConfig;
+
+    customMenuConfig.map((menuConfig) => {
+      const bookmarksMenuConfig = menuConfig;
+
+      const submenu: MenuItemConstructorOptions[] =
+        bookmarksMenuConfig.bookmarks.map((bookmark) => {
+          switch (bookmark.type) {
+            case 'link':
+              if (!('title' in bookmark && 'url' in bookmark)) {
+                throw new Error(
+                  'All links in the bookmarks menu must have a title and url.',
                 );
-              },
-              accelerator:
-                'shortcut' in bookmark ? bookmark.shortcut : undefined,
-            };
-          case 'separator':
-            return {
-              type: 'separator',
-            };
-          default:
-            throw new Error(
-              'A bookmarks menu entry has an invalid type; type must be one of "link", "separator".',
-            );
-        }
-      });
-    const bookmarksMenu: MenuItemConstructorOptions = {
-      label: bookmarksMenuConfig.menuLabel,
-      submenu,
-    };
-    // Insert custom bookmarks menu between menus "View" and "Window"
-    menuTemplate.splice(menuTemplate.length - 2, 0, bookmarksMenu);
+              }
+              try {
+                new URL(bookmark.url);
+              } catch {
+                throw new Error(
+                  'Bookmark URL "' + bookmark.url + '"is invalid.',
+                );
+              }
+              return {
+                label: bookmark.title,
+                click: (): void => {
+                  goToURL(bookmark.url)?.catch((err: unknown): void =>
+                    log.error(`${bookmark.title}.click ERROR`, err),
+                  );
+                },
+                accelerator:
+                  'shortcut' in bookmark ? bookmark.shortcut : undefined,
+              };
+            case 'separator':
+              return {
+                type: 'separator',
+              };
+            default:
+              throw new Error(
+                'A bookmarks menu entry has an invalid type; type must be one of "link", "separator".',
+              );
+          }
+        });
+
+      const bookmarksMenu: MenuItemConstructorOptions = {
+        label: bookmarksMenuConfig.menuLabel,
+        submenu,
+      };
+
+      // Insert custom bookmarks menu between menus "Edit" and "View"
+      menuTemplate.splice(menuTemplate.length - 3, 0, bookmarksMenu);
+    });
   } catch (err: unknown) {
     log.error('Failed to load & parse bookmarks configuration JSON file.', err);
   }

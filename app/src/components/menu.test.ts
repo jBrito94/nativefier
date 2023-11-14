@@ -3,6 +3,7 @@ import { BrowserWindow, MenuItemConstructorOptions } from 'electron';
 jest.mock('../helpers/helpers');
 import { isOSX } from '../helpers/helpers';
 import { generateMenu } from './menu';
+import { OutputOptions } from '../../../shared/src/options/model';
 
 describe('generateMenu', () => {
   let window: BrowserWindow;
@@ -46,7 +47,7 @@ describe('generateMenu', () => {
         nativefierVersion: '1.0.0',
         zoom: 1.0,
         disableDevTools: false,
-      },
+      } as OutputOptions,
       window,
     );
 
@@ -73,7 +74,7 @@ describe('generateMenu', () => {
         nativefierVersion: '1.0.0',
         zoom: 1.0,
         disableDevTools: false,
-      },
+      } as OutputOptions,
       window,
     );
 
@@ -103,7 +104,7 @@ describe('generateMenu', () => {
           nativefierVersion: '1.0.0',
           zoom: 1.0,
           disableDevTools: false,
-        },
+        } as OutputOptions,
         window,
       );
 
@@ -140,7 +141,7 @@ describe('generateMenu', () => {
           nativefierVersion: '1.0.0',
           zoom: 1.0,
           disableDevTools: false,
-        },
+        } as OutputOptions,
         window,
       );
 
