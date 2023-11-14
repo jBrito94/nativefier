@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-misused-promises */
 import * as fs from 'fs';
 import path from 'path';
 
@@ -79,6 +80,15 @@ export function generateMenu(
   const editMenu: MenuItemConstructorOptions = {
     label: '&Edit',
     submenu: [
+      {
+        label: 'Home',
+        accelerator: 'CmdOrCtrl+Shift+H',
+        click: (): void => {
+          goToURL(options.targetUrl)?.catch((err: unknown): void =>
+            log.error(`${options.targetUrl}.click ERROR`, err),
+          );
+        },
+      },
       {
         label: 'New Window',
         accelerator: 'CmdOrCtrl+Shift+N',
@@ -288,6 +298,7 @@ export function generateMenu(
     );
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const windowMenu: MenuItemConstructorOptions = {
     label: '&Window',
     role: 'window',
@@ -305,6 +316,7 @@ export function generateMenu(
     ],
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const helpMenu: MenuItemConstructorOptions = {
     label: '&Help',
     role: 'help',
@@ -380,9 +392,9 @@ export function generateMenu(
         role: 'front',
       },
     );
-    menuTemplate = [electronMenu, editMenu, viewMenu, windowMenu, helpMenu];
+    menuTemplate = [electronMenu, editMenu, viewMenu];
   } else {
-    menuTemplate = [editMenu, viewMenu, windowMenu, helpMenu];
+    menuTemplate = [editMenu, viewMenu];
   }
 
   return menuTemplate;
@@ -445,8 +457,7 @@ function injectBookmarks(menuTemplate: MenuItemConstructorOptions[]): void {
         submenu,
       };
 
-      // Insert custom bookmarks menu between menus "Edit" and "View"
-      menuTemplate.splice(menuTemplate.length - 3, 0, bookmarksMenu);
+      menuTemplate.splice(menuTemplate.length, 0, bookmarksMenu);
     });
   } catch (err: unknown) {
     log.error('Failed to load & parse bookmarks configuration JSON file.', err);
