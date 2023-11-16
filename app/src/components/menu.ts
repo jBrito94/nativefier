@@ -90,6 +90,9 @@ export function generateMenu(
         },
       },
       {
+        type: 'separator',
+      },
+      {
         label: 'New Window',
         accelerator: 'CmdOrCtrl+Shift+N',
         click: () =>
@@ -98,6 +101,28 @@ export function generateMenu(
             setupNativefierWindow,
             getCurrentURL(),
           ),
+      },
+      {
+        label: 'Hide Menu',
+        accelerator: 'CmdOrCtrl+Shift+M',
+        click: (
+          item: MenuItem,
+          focusedWindow: BrowserWindow | undefined,
+        ): void => {
+          log.debug('Toggle Full Screen.click()', {
+            item,
+            focusedWindow,
+            isMenuBarVisible: focusedWindow?.menuBarVisible,
+          });
+          if (!focusedWindow) {
+            focusedWindow = mainWindow;
+          }
+          if (focusedWindow?.menuBarVisible) {
+            focusedWindow.menuBarVisible = false;
+          } else {
+            focusedWindow.menuBarVisible = true;
+          }
+        },
       },
       {
         type: 'separator',
